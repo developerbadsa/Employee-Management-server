@@ -77,7 +77,15 @@ async function run() {
         return res.status(403).send({message: 'forbidden access'});
       }
       next();
-    };
+    } 
+    app.get('/employee-list',verifyToken, verifyHR, async (req, res)=>{
+
+      const employees = await usersDb.find({position: 'Employee'}).toArray()
+
+      console.log(employees)
+      res.send(employees)
+    })
+
 
     // post requiests
     app.post('/users', async (req, res) => {

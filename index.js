@@ -79,11 +79,36 @@ async function run() {
       }
       next();
     } 
+
+
+//     get requests
     app.get('/employee-list',verifyToken,  async (req, res)=>{
 
       const employees = await usersDb.find({position: 'Employee'}).toArray()
 
       res.send(employees)
+    })
+
+
+
+    app.get('/employee-list/:id',verifyToken,  async (req, res)=>{
+
+      const id = req.params.id
+
+      const result = await usersDb.findOne({_id: new ObjectId(id)})
+      // console.log(result)
+      res.send(result)
+    })
+
+
+//     payment statics
+    app.get('/payment-list/:email',verifyToken,  async (req, res)=>{
+
+      const email = req.params.email
+
+      const result = await paymentsDb.find({ email: `${email}` }).project({ month: 1, year: 1, paidAmount: 1 , _id: 0}).toArray()
+      console.log(email)
+      res.send(result)
     })
 
 
@@ -107,6 +132,22 @@ async function run() {
       console.log(result)
       res.send(result)
     })
+
+
+//     check hr
+    app.post('/isHR', async(req,res)=>{
+      const {email} = req?.body
+
+       const result =await usersDb.findOne({email} )
+
+       if(result?.position==="HR"){
+            res.send(true)
+       }else{
+            res.send(false)
+       }
+    })
+    
+
 
 
     //update user Verify status
@@ -145,7 +186,7 @@ async function run() {
 }
 run().catch(console.dir);
 
-// Start the server
+// Start the serve
 app.listen(port, () => {
   console.log(`Server is running on${port}`);
 });

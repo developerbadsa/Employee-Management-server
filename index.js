@@ -9,7 +9,7 @@ const jwt = require('jsonwebtoken');
 app.use(cors());
 app.use(express.json());
 
-const {MongoClient, ServerApiVersion} = require('mongodb');
+const {MongoClient, ServerApiVersion, ObjectId} = require('mongodb');
 const uri = process.env.DB_URL;
 const client = new MongoClient(uri, {
   serverApi: {
@@ -22,6 +22,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     const usersDb = client.db('usersDB').collection('usersCollection');
+    const paymentsDb = client.db('payment').collection('paymentCollections');
 
     // jwt related api
     app.post('/jwt', async (req, res) => {
@@ -78,11 +79,10 @@ async function run() {
       }
       next();
     } 
-    app.get('/employee-list',verifyToken, verifyHR, async (req, res)=>{
+    app.get('/employee-list',verifyToken,  async (req, res)=>{
 
       const employees = await usersDb.find({position: 'Employee'}).toArray()
 
-      console.log(employees)
       res.send(employees)
     })
 
@@ -94,10 +94,43 @@ async function run() {
 
       const result = await usersDb.insertOne(user);
 
-      console.log(user);
 
       res.send(result);
     });
+
+    app.post('/pay-to-employee', async(req,res)=>{
+      const payData = req?.body
+
+      const result =await paymentsDb.insertOne(payData)
+
+
+      console.log(result)
+      res.send(result)
+    })
+
+
+    //update user Verify status
+    app.put('/employee-verify-update:id', async(req, res)=>{
+      const id = req.params.id
+
+      const updateDoc = {
+            $set: {
+            isVerify: true
+            },
+          };
+      const result = await usersDb.updateOne({ _id:new ObjectId(id)}, updateDoc);
+      res.send(result)
+
+    })
+
+
+
+
+
+
+
+
+
 
     app.get('/', (req, res) => {
       res.send('Hello, World!');

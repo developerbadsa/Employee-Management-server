@@ -75,9 +75,9 @@ async function run() {
       const query = {email: email};
       const user = await usersDb.findOne(query);
       const isAdmin = user?.role === 'admin';
-      if (!isAdmin) {
-        return res.status(403).send({message: 'forbidden access'});
-      }
+      // if (!isAdmin) {
+      //   return res.status(403).send({message: 'forbidden access'});
+      // }
       next();
     } 
 
@@ -90,7 +90,7 @@ async function run() {
       res.send(employees)
     })
 //     get requests
-    app.get('/employee-list/verified',  async (req, res)=>{
+    app.get('/employee-list/verified',verifyToken,verifyAdmin,  async (req, res)=>{
 
       const employeesVerified = await usersDb.find({position: 'Employee', isVerify:true}).toArray()
       console.log(employeesVerified)
@@ -124,10 +124,6 @@ async function run() {
         const result =await tastsDb.find({email} ).project({ task: 1, workedHours: 1, workedDate: 1 , _id: 0}).toArray()
       res.send(result)
     })
-
-
-
-
 
     // post requiests
     app.post('/users', async (req, res) => {
@@ -211,7 +207,7 @@ async function run() {
 
 
 
-
+//     ===============================Update REQUESTS ==========================
     //update user Verify status
     app.put('/employee-verify-update:id', async(req, res)=>{
       const id = req.params.id
@@ -239,7 +235,16 @@ console.log(result)
       res.send(result);
     })
 
+//     ===============================DELETE REQUESTS ==========================
 
+// fire user from admin
+app.delete('/users/fire',(req, res)=>{ 
+      const userId = req.body.userID; 
+
+      const result = usersDb.deleteOne({_id: new ObjectId(userId)})
+
+      res.send(result)
+})
 
 
 

@@ -23,6 +23,7 @@ async function run() {
   try {
     const usersDb = client.db('usersDB').collection('usersCollection');
     const paymentsDb = client.db('payment').collection('paymentCollections');
+    const tastsDb = client.db('task').collection('taskCollection');
 
     // jwt related api
     app.post('/jwt', async (req, res) => {
@@ -111,6 +112,16 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/employee-task', async(req,res)=>{
+      const {email} = req?.body
+
+        const result =await tastsDb.find({email} ).project({ task: 1, workedHours: 1, workedDate: 1 , _id: 0}).toArray()
+      res.send(result)
+    })
+
+
+
+
 
     // post requiests
     app.post('/users', async (req, res) => {
@@ -146,7 +157,37 @@ async function run() {
             res.send(false)
        }
     })
-    
+    //     check employee
+    app.post('/isEmployee', async(req,res)=>{
+      const {email} = req?.body
+
+       const result =await usersDb.findOne({email} )
+
+       if(result?.position==="Employee"){
+            res.send(true)
+       }else{
+            res.send(false)
+       }
+    })
+
+
+    //     paymwnt history
+    app.post('/payment-history', async(req,res)=>{
+      const {email} = req?.body
+
+       const result =await paymentsDb.find({email} ).project({ month: 1, paidAmount: 1, tnxid: 1 , _id: 0}).toArray()
+      res.send(result)
+    })
+
+
+    app.post('/employee-tasks', async(req,res)=>{
+      const email = req.query.email
+      const EmployeeData = req.body
+       const result = await tastsDb.insertOne(EmployeeData )
+      res.send(result)
+      console.log( result)
+    })
+
 
 
 

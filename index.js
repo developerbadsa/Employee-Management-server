@@ -46,17 +46,17 @@ async function run() {
         next();
       });
     };
-        //Verify Employee
-        const verifyEmployee = async (req, res, next) => {
-            const email = req.decoded.email;
-            const query = {email: email};
-            const user = await usersDb.findOne(query);
-            const isAdmin = user?.role === 'Employee';
-            if (!isAdmin) {
-              return res.status(403).send({message: 'forbidden access'});
-            }
-            next();
-          };
+    //Verify Employee
+    const verifyEmployee = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = {email: email};
+      const user = await usersDb.findOne(query);
+      const isAdmin = user?.role === 'Employee';
+      if (!isAdmin) {
+        return res.status(403).send({message: 'forbidden access'});
+      }
+      next();
+    };
     //Verify HR
     const verifyHR = async (req, res, next) => {
       const email = req.decoded.email;
@@ -79,51 +79,57 @@ async function run() {
       //   return res.status(403).send({message: 'forbidden access'});
       // }
       next();
-    } 
+    };
 
+    //     get requests
+    app.get('/employee-list', async (req, res) => {
+      const employees = await usersDb.find({position: 'Employee'}).toArray();
 
-//     get requests
-    app.get('/employee-list',  async (req, res)=>{
+      res.send(employees);
+    });
+    //     get requests
+    app.get(
+      '/employee-list/verified',
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const employeesVerified = await usersDb.find({
+            $or: [{position: 'Employee', isVerify: true}, {position: 'HR'}],
+          })
+          .toArray();
+        console.log(employeesVerified);
+        res.send(employeesVerified);
+      }
+    );
 
-      const employees = await usersDb.find({position: 'Employee'}).toArray()
+    app.get('/employee-list/:id', verifyToken, async (req, res) => {
+      const id = req.params.id;
 
-      res.send(employees)
-    })
-//     get requests
-    app.get('/employee-list/verified',verifyToken,verifyAdmin,  async (req, res)=>{
-
-      const employeesVerified = await usersDb.find({position: 'Employee', isVerify:true}).toArray()
-      console.log(employeesVerified)
-      res.send(employeesVerified)
-    })
-
-
-
-    app.get('/employee-list/:id',verifyToken,  async (req, res)=>{
-
-      const id = req.params.id
-
-      const result = await usersDb.findOne({_id: new ObjectId(id)})
+      const result = await usersDb.findOne({_id: new ObjectId(id)});
       // console.log(result)
-      res.send(result)
-    })
+      res.send(result);
+    });
 
+    //     payment statics
+    app.get('/payment-list/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
 
-//     payment statics
-    app.get('/payment-list/:email',verifyToken,  async (req, res)=>{
+      const result = await paymentsDb
+        .find({email: `${email}`})
+        .project({month: 1, year: 1, paidAmount: 1, _id: 0})
+        .toArray();
+      res.send(result);
+    });
 
-      const email = req.params.email
+    app.get('/employee-task', async (req, res) => {
+      const {email} = req?.body;
 
-      const result = await paymentsDb.find({ email: `${email}` }).project({ month: 1, year: 1, paidAmount: 1 , _id: 0}).toArray()
-      res.send(result)
-    })
-
-    app.get('/employee-task', async(req,res)=>{
-      const {email} = req?.body
-
-        const result =await tastsDb.find({email} ).project({ task: 1, workedHours: 1, workedDate: 1 , _id: 0}).toArray()
-      res.send(result)
-    })
+      const result = await tastsDb
+        .find({email})
+        .project({task: 1, workedHours: 1, workedDate: 1, _id: 0})
+        .toArray();
+      res.send(result);
+    });
 
     // post requiests
     app.post('/users', async (req, res) => {
@@ -132,126 +138,121 @@ async function run() {
 
       const result = await usersDb.insertOne(user);
 
-
       res.send(result);
     });
 
-    app.post('/pay-to-employee', async(req,res)=>{
-      const payData = req?.body
+    app.post('/pay-to-employee', async (req, res) => {
+      const payData = req?.body;
 
-      const result =await paymentsDb.insertOne(payData)
+      const result = await paymentsDb.insertOne(payData);
 
+      console.log(result);
+      res.send(result);
+    });
 
-      console.log(result)
-      res.send(result)
-    })
+    //     check hr
+    app.post('/isHR', async (req, res) => {
+      const {email} = req?.body;
 
+      const result = await usersDb.findOne({email});
 
-//     check hr
-    app.post('/isHR', async(req,res)=>{
-      const {email} = req?.body
-
-       const result =await usersDb.findOne({email} )
-
-       if(result?.position==="HR"){
-            res.send(true)
-       }else{
-            res.send(false)
-       }
-    })
+      if (result?.position === 'HR') {
+        res.send(true);
+      } else {
+        res.send(false);
+      }
+    });
     //     check employee
-    app.post('/isEmployee', async(req,res)=>{
-      const {email} = req?.body
+    app.post('/isEmployee', async (req, res) => {
+      const {email} = req?.body;
 
-       const result =await usersDb.findOne({email} )
+      const result = await usersDb.findOne({email});
 
-       if(result?.position==="Employee"){
-            res.send(true)
-       }else{
-            res.send(false)
-       }
-    })
+      if (result?.position === 'Employee') {
+        res.send(true);
+      } else {
+        res.send(false);
+      }
+    });
 
     //     check Admin
-    app.post('/isAdmin', async(req,res)=>{
-      const {email} = req?.body
+    app.post('/isAdmin', async (req, res) => {
+      const {email} = req?.body;
 
-       const result =await usersDb.findOne({email} )
+      const result = await usersDb.findOne({email});
 
-       console.log(email)
+      console.log(email);
 
-       if(result?.position==="Admin"){
-            res.send(true)
-       }else{
-            res.send(false)
-       }
-    })
-
+      if (result?.position === 'Admin') {
+        res.send(true);
+      } else {
+        res.send(false);
+      }
+    });
 
     // paymwnt history
-    app.post('/payment-history', async(req,res)=>{
-      const {email} = req?.body
+    app.post('/payment-history', async (req, res) => {
+      const {email} = req?.body;
 
-       const result =await paymentsDb.find({email} ).project({ month: 1, paidAmount: 1, tnxid: 1 , _id: 0}).toArray()
-      res.send(result)
-    })
+      const result = await paymentsDb
+        .find({email})
+        .project({month: 1, paidAmount: 1, tnxid: 1, _id: 0})
+        .toArray();
+      res.send(result);
+    });
 
+    app.post('/employee-tasks', async (req, res) => {
+      const email = req.query.email;
+      const EmployeeData = req.body;
+      const result = await tastsDb.insertOne(EmployeeData);
+      res.send(result);
+      console.log(result);
+    });
 
-    app.post('/employee-tasks', async(req,res)=>{
-      const email = req.query.email
-      const EmployeeData = req.body
-       const result = await tastsDb.insertOne(EmployeeData )
-      res.send(result)
-      console.log( result)
-    })
-
-
-
-//     ===============================Update REQUESTS ==========================
+    //     ===============================Update REQUESTS ==========================
     //update user Verify status
-    app.put('/employee-verify-update:id', async(req, res)=>{
-      const id = req.params.id
+    app.put('/employee-verify-update:id', async (req, res) => {
+      const id = req.params.id;
 
       const updateDoc = {
-            $set: {
-            isVerify: true
-            },
-          };
-      const result = await usersDb.updateOne({ _id:new ObjectId(id)}, updateDoc);
-      res.send(result)
-
-    })
-
+        $set: {
+          isVerify: true,
+        },
+      };
+      const result = await usersDb.updateOne(
+        {_id: new ObjectId(id)},
+        updateDoc
+      );
+      res.send(result);
+    });
 
     //Update user role for Make HR
     app.put('/users/makeHR', async (req, res) => {
       const {id} = req.body;
 
-      const result = await usersDb.updateOne({_id:new ObjectId(id)}, {$set: {
-            position : `HR`
-          }})
-console.log(result)
+      const result = await usersDb.updateOne(
+        {_id: new ObjectId(id)},
+        {
+          $set: {
+            position: `HR`,
+          },
+        }
+      );
+      console.log(result);
 
       res.send(result);
-    })
+    });
 
-//     ===============================DELETE REQUESTS ==========================
+    //     ===============================DELETE REQUESTS ==========================
 
-// fire user from admin
-app.delete('/users/fire',(req, res)=>{ 
-      const userId = req.body.userID; 
+    // fire user from admin
+    app.delete('/users/fire', (req, res) => {
+      const userId = req.body.userID;
 
-      const result = usersDb.deleteOne({_id: new ObjectId(userId)})
+      const result = usersDb.deleteOne({_id: new ObjectId(userId)});
 
-      res.send(result)
-})
-
-
-
-
-
-
-
+      res.send(result);
+    });
 
     app.get('/', (req, res) => {
       res.send('Hello, World!');

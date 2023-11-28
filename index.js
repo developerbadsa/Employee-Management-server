@@ -83,11 +83,18 @@ async function run() {
 
 
 //     get requests
-    app.get('/employee-list',verifyToken,  async (req, res)=>{
+    app.get('/employee-list',  async (req, res)=>{
 
       const employees = await usersDb.find({position: 'Employee'}).toArray()
 
       res.send(employees)
+    })
+//     get requests
+    app.get('/employee-list/verified',  async (req, res)=>{
+
+      const employeesVerified = await usersDb.find({position: 'Employee', isVerify:true}).toArray()
+      console.log(employeesVerified)
+      res.send(employeesVerified)
     })
 
 
@@ -108,7 +115,6 @@ async function run() {
       const email = req.params.email
 
       const result = await paymentsDb.find({ email: `${email}` }).project({ month: 1, year: 1, paidAmount: 1 , _id: 0}).toArray()
-      console.log(email)
       res.send(result)
     })
 
@@ -170,8 +176,23 @@ async function run() {
        }
     })
 
+    //     check Admin
+    app.post('/isAdmin', async(req,res)=>{
+      const {email} = req?.body
 
-    //     paymwnt history
+       const result =await usersDb.findOne({email} )
+
+       console.log(email)
+
+       if(result?.position==="Admin"){
+            res.send(true)
+       }else{
+            res.send(false)
+       }
+    })
+
+
+    // paymwnt history
     app.post('/payment-history', async(req,res)=>{
       const {email} = req?.body
 
@@ -203,6 +224,19 @@ async function run() {
       const result = await usersDb.updateOne({ _id:new ObjectId(id)}, updateDoc);
       res.send(result)
 
+    })
+
+
+    //Update user role for Make HR
+    app.put('/users/makeHR', async (req, res) => {
+      const {id} = req.body;
+
+      const result = await usersDb.updateOne({_id:new ObjectId(id)}, {$set: {
+            position : `HR`
+          }})
+console.log(result)
+
+      res.send(result);
     })
 
 

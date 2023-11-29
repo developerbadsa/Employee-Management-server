@@ -87,12 +87,9 @@ async function run() {
 
 
 
-
-
-
-
-
     //   =======================  get requests=============================
+
+
 
     // get all Employee List -------HR----------
     app.get('/employee-list',verifyToken, verifyHR, async (req, res) => {
@@ -148,7 +145,12 @@ if(email ){
       const result = await tastsDb.find().project({task: 1, workedHours: 1, workedDate: 1,userName:1, _id: 0}).toArray();
     res.send(result);
     })
-
+    //   check user in bd
+    app.get('/check-user', async(req, res)=>{
+      const {FirebaseLoggedEmail, FirebaseLoggedName} = req.query
+      const result =await usersDb.findOne({email: FirebaseLoggedEmail, name: FirebaseLoggedName})
+      res.send(result)
+    })
 
 
 

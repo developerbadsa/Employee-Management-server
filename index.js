@@ -48,11 +48,13 @@ async function run() {
     };
     //Verify Employee
     const verifyEmployee = async (req, res, next) => {
-      const email = req.decoded.email;
-      const query = {email: email};
+      const decEmail = req?.decoded?.email
+      const query = {email: decEmail};
       const user = await usersDb.findOne(query);
-      const isAdmin = user?.role === 'Employee';
-      if (!isAdmin) {
+      const isEmployee = user?.position === 'Employee';
+
+
+      if (!isEmployee) {
         return res.status(403).send({message: 'forbidden access'});
       }
       next();
@@ -62,7 +64,7 @@ async function run() {
       const email = req.decoded.email;
       const query = {email: email};
       const user = await usersDb.findOne(query);
-      const isAdmin = user?.role === 'HR';
+      const isAdmin = user?.position === 'HR';
       if (!isAdmin) {
         return res.status(403).send({message: 'forbidden access'});
       }
@@ -71,13 +73,13 @@ async function run() {
 
     // verify  admin
     const verifyAdmin = async (req, res, next) => {
-      const email = req.decoded.email;
+      const email = req?.decoded?.email;
       const query = {email: email};
       const user = await usersDb.findOne(query);
-      const isAdmin = user?.role === 'admin';
-      // if (!isAdmin) {
-      //   return res.status(403).send({message: 'forbidden access'});
-      // }
+      const isAdmin = user?.position === 'Admin';
+      if (!isAdmin) {
+        return res.status(403).send({message: 'forbidden access'});
+      }
       next();
     };
 
@@ -91,17 +93,17 @@ async function run() {
 
 
     //   =======================  get requests=============================
-    app.get('/employee-list', async (req, res) => {
+
+    // get all Employee List -------HR----------
+    app.get('/employee-list',verifyToken, verifyHR, async (req, res) => {
       const employees = await usersDb.find({position: 'Employee'}).toArray();
 
       res.send(employees);
     });
-    //     get requests
-    app.get(
-      '/employee-list/verified',
-      verifyToken,
-      verifyAdmin,
-      async (req, res) => {
+
+
+    //get verified users and only hr ----------admin---------------
+    app.get('/employee-list/verified',  verifyToken, verifyAdmin,  async (req, res) => {
         const employeesVerified = await usersDb.find({
             $or: [{position: 'Employee', isVerify: true}, {position: 'HR'}],
           })
@@ -110,17 +112,17 @@ async function run() {
       }
     );
 
-    app.get('/employee-list/:id', verifyToken, async (req, res) => {
+    //Employee Details Route -----------HR----------------
+    app.get('/employee-list/:id', verifyToken, verifyHR, async (req, res) => {
       const id = req.params.id;
 
       const result = await usersDb.findOne({_id: new ObjectId(id)});
       res.send(result);
     });
 
-    //     payment statics
-    app.get('/payment-list/:email', verifyToken, async (req, res) => {
+    //     payment statics ---------------HR-----------------
+    app.get('/payment-list/:email', verifyToken, verifyHR, async (req, res) => {
       const email = req.params.email;
-
       const result = await paymentsDb
         .find({email: `${email}`})
         .project({month: 1, year: 1, paidAmount: 1, _id: 0})
@@ -129,31 +131,31 @@ async function run() {
     });
 
 
-
-    app.get('/employee-task', async (req, res) => {
+//Work Sheet Employee ---------------- Employee ----------------
+    app.get('/employee-task', verifyToken, verifyEmployee, async (req, res) => {
       const {email} = req?.query
 
-
 if(email ){
-      const result = await tastsDb
-      .find({userEmail: email})
-      .project({task: 1, workedHours: 1, workedDate: 1, _id: 0})
-      .toArray();
-      res.send(result);
-      console.log(email)
+      const result = await tastsDb .find({userEmail: email}) .project({task: 1, workedHours: 1, workedDate: 1, _id: 0}) .toArray();
+      res.send(result)
 }
   
     });
 
+    //All Task Of users for progress page ---------------HR-----------
+    app.get('/all-tasks',verifyToken, verifyHR, async(req, res)=>{
 
-    app.get('/all-tasks', async(req, res)=>{
-
-      const result = await tastsDb.find().project({task: 1, workedHours: 1, workedDate: 1, _id: 0}).toArray();
+      const result = await tastsDb.find().project({task: 1, workedHours: 1, workedDate: 1,userName:1, _id: 0}).toArray();
     res.send(result);
     })
 
 
+
+
+
     //======================= post requiests===============================
+
+//     when user register post data to DB
     app.post('/users', async (req, res) => {
       const user = req.body;
       user.isVerify = false;
@@ -163,7 +165,10 @@ if(email ){
       res.send(result);
     });
 
-    app.post('/pay-to-employee', async (req, res) => {
+
+//  Pay to Employee   --------HR-------
+
+    app.post('/pay-to-employee',verifyToken, verifyHR, async (req, res) => {
       const payData = req?.body;
 
       const result = await paymentsDb.insertOne(payData);
@@ -208,8 +213,8 @@ if(email ){
       }
     });
 
-    // paymwnt history
-    app.post('/payment-history', async (req, res) => {
+    // paymwnt history ---------Employee--------
+    app.post('/payment-history',verifyToken, verifyEmployee , async (req, res) => {
       const {email} = req?.body;
 
       const result = await paymentsDb
@@ -219,16 +224,19 @@ if(email ){
       res.send(result);
     });
 
-    app.post('/employee-tasks', async (req, res) => {
-      const email = req.query.email;
+
+//     post employee tasks -insert ---------- Emplopyee-------------
+    app.post('/employee-tasks',verifyToken, verifyEmployee, async (req, res) => {
+      
       const EmployeeData = req.body;
       const result = await tastsDb.insertOne(EmployeeData);
       res.send(result);
     });
 
+
     //     ===============================Update REQUESTS ==========================
-    //update user Verify status
-    app.put('/employee-verify-update:id', async (req, res) => {
+    //update user Verify status ----------HR-----------
+    app.put('/employee-verify-update:id',verifyToken, verifyHR, async (req, res) => {
       const id = req.params.id;
 
       const updateDoc = {
@@ -244,7 +252,7 @@ if(email ){
     });
 
     //Update user role for Make HR
-    app.put('/users/makeHR', async (req, res) => {
+    app.put('/users/makeHR',verifyToken, verifyAdmin, async (req, res) => {
       const {id} = req.body;
 
       const result = await usersDb.updateOne(
@@ -262,7 +270,7 @@ if(email ){
     //     ===============================DELETE REQUESTS ==========================
 
     // fire user from admin
-    app.delete('/users/fire', (req, res) => {
+    app.delete('/users/fire',verifyToken, verifyAdmin, (req, res) => {
       const userId = req.body.userID;
 
       const result = usersDb.deleteOne({_id: new ObjectId(userId)});
@@ -270,7 +278,7 @@ if(email ){
       res.send(result);
     });
 
-    app.get('/', (req, res) => {
+    app.get('/',verifyToken, (req, res) => {
       res.send('Hello, World!');
     });
 

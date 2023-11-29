@@ -81,7 +81,16 @@ async function run() {
       next();
     };
 
-    //     get requests
+
+
+
+
+
+
+
+
+
+    //   =======================  get requests=============================
     app.get('/employee-list', async (req, res) => {
       const employees = await usersDb.find({position: 'Employee'}).toArray();
 
@@ -97,7 +106,6 @@ async function run() {
             $or: [{position: 'Employee', isVerify: true}, {position: 'HR'}],
           })
           .toArray();
-        console.log(employeesVerified);
         res.send(employeesVerified);
       }
     );
@@ -106,7 +114,6 @@ async function run() {
       const id = req.params.id;
 
       const result = await usersDb.findOne({_id: new ObjectId(id)});
-      // console.log(result)
       res.send(result);
     });
 
@@ -121,17 +128,32 @@ async function run() {
       res.send(result);
     });
 
-    app.get('/employee-task', async (req, res) => {
-      const {email} = req?.body;
 
+
+    app.get('/employee-task', async (req, res) => {
+      const {email} = req?.query
+
+
+if(email ){
       const result = await tastsDb
-        .find({email})
-        .project({task: 1, workedHours: 1, workedDate: 1, _id: 0})
-        .toArray();
+      .find({userEmail: email})
+      .project({task: 1, workedHours: 1, workedDate: 1, _id: 0})
+      .toArray();
       res.send(result);
+      console.log(email)
+}
+  
     });
 
-    // post requiests
+
+    app.get('/all-tasks', async(req, res)=>{
+
+      const result = await tastsDb.find().project({task: 1, workedHours: 1, workedDate: 1, _id: 0}).toArray();
+    res.send(result);
+    })
+
+
+    //======================= post requiests===============================
     app.post('/users', async (req, res) => {
       const user = req.body;
       user.isVerify = false;
@@ -145,8 +167,6 @@ async function run() {
       const payData = req?.body;
 
       const result = await paymentsDb.insertOne(payData);
-
-      console.log(result);
       res.send(result);
     });
 
@@ -181,8 +201,6 @@ async function run() {
 
       const result = await usersDb.findOne({email});
 
-      console.log(email);
-
       if (result?.position === 'Admin') {
         res.send(true);
       } else {
@@ -206,7 +224,6 @@ async function run() {
       const EmployeeData = req.body;
       const result = await tastsDb.insertOne(EmployeeData);
       res.send(result);
-      console.log(result);
     });
 
     //     ===============================Update REQUESTS ==========================
@@ -238,7 +255,6 @@ async function run() {
           },
         }
       );
-      console.log(result);
 
       res.send(result);
     });

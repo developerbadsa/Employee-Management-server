@@ -127,6 +127,23 @@ async function run() {
       res.send(result);
     });
 
+       //    get payments ---------------HR-----------------
+    app.get('/payment-list-check', verifyToken, verifyHR, async (req, res) => {
+      const {month, email, year} = req.query.formData
+      const paymentsData = await paymentsDb.find({email: `${email}`}).project({month: 1, year: 1, _id: 0}).toArray();
+
+
+     const isMatched = paymentsData.filter(data=>data.month === month && data.year === year)
+
+      if(isMatched?.length){
+            res.send(false);
+      }else{
+            res.send(true);
+      }
+
+
+    });
+
 
 //Work Sheet Employee ---------------- Employee ----------------
     app.get('/employee-task', verifyToken, verifyEmployee, async (req, res) => {
